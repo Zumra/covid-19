@@ -1,8 +1,3 @@
-import dash
-import dash_core_components as dcc
-import dash_html_components as html
-import plotly.graph_objects as go
-from dash.dependencies import Input, Output
 import pandas as pd
 import matplotlib.pyplot as plt
 
@@ -33,11 +28,11 @@ def nonreactive_data(country, state):
                    .reset_index()
     else:
        data = data.loc[data['Province/State'] == state]
+    data = data.drop(['date'], axis=1)
     newCases = data.select_dtypes(include='Int64').diff().fillna(0)
     newCases.columns = [column.replace('Cum', 'New') 
                         for column in newCases.columns]
     data = data.join(newCases)
-    data['dateStr'] = data['date'].dt.strftime('%b %d, %Y')
     return data
 
 serbia = nonreactive_data('Serbia', '<all>')
