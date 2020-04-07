@@ -4,6 +4,11 @@ import matplotlib.pyplot as plt
 from matplotlib.pyplot import cm
 import statsmodels.api as sm
 from sklearn import datasets
+import dash
+import dash_core_components as dcc
+import dash_html_components as html
+import plotly.graph_objects as go
+from dash.dependencies import Input, Output
 
 baseURL = "https://raw.githubusercontent.com/CSSEGISandData/COVID-19/master/csse_covid_19_data/csse_covid_19_time_series/"
 def loadData(fileName, columnName):
@@ -92,23 +97,80 @@ def AddCountryToPlot(ax, color, countryData, country, marker = '.'):
         # ax.plot(countryData.CumConfirmed.array.to_numpy(), countryData.NewConfirmed.array.to_numpy(), marker, c=color)
         ax.plot(countryData.CumConfirmed.array.to_numpy(), countryData['Predictions'].array.to_numpy(), '-', c=color, label=country)
 
-color=iter(cm.rainbow(np.linspace(0,1,len(countries))))
 
-fig = plt.figure()
-ax = plt.gca()
-for i in range(len(countries)):
-    AddCountryToPlot(ax, next(color), GetCountryData(countries[i]), countries[i], '.')
-    ax.set_yscale('log')
-    ax.set_xscale('log')
+## Plot with matplotlib.
+# color=iter(cm.rainbow(np.linspace(0,1,len(countries))))
+# fig = plt.figure()
+# ax = plt.gca()
+# for i in range(len(countries)):
+#     AddCountryToPlot(ax, next(color), GetCountryData(countries[i]), countries[i], '.')
+#     ax.set_yscale('log')
+#     ax.set_xscale('log')
+# ax.legend()
+# plt.show()
 
-ax.legend()
-plt.show()
+## Interested countries
+# Serbia, China, Italy, US, South Korea, Russia, Sweden, Austria, Australia
 
-# AddCountryToPlot(ax, next(color), GetCountryData('Serbia'), 'o')
-# AddCountryToPlot(ax, next(color), GetCountryData('China'))
-# AddCountryToPlot(ax, next(color), GetCountryData('Italy'))
-# AddCountryToPlot(ax, next(color), GetCountryData('US'))
-# AddCountryToPlot(ax, next(color), GetCountryData('Korea, South'))
-# AddCountryToPlot(ax, next(color), GetCountryData('Russia'))
-# AddCountryToPlot(ax, next(color), GetCountryData('Sweden'))
-# AddCountryToPlot(ax, next(color), GetCountryData('Croatia'), 'x')
+## Plot with dash and plotly
+external_stylesheets=['https://codepen.io/chriddyp/pen/bWLwgP.css']
+tickFont = {'size':12, 'color':"rgb(30,30,30)", \
+            'family':"Courier New, monospace"}
+
+app = dash.Dash(__name__, external_stylesheets=external_stylesheets)
+app.layout = html.Div(
+    style={ 'font-family':"Courier New, monospace" },
+    children=[
+        html.H1('Is your country getting better w.r.t. Coronavirus (COVID-19)?'),
+        html.Div(className="row", children=[
+            html.Div(className="selector", children=[
+                html.H5('Country'),
+                dcc.Dropdown( 
+                    id='country',
+                    options=[{'label':c, 'value':c} \
+                        for c in countries],
+                    value='Serbia'
+                )
+            ]),
+        ]),
+        dcc.Graph(
+            id="plot_country",
+            config={ 'displayModeBar': False }
+        ),
+    ]
+)
+
+def chart(data):
+    figure = go.Figure(data=[
+        go.Scatter(
+            x=data.CumConfirmed, y=data.Predictions,
+            mode='lines+markers',
+            marker_color='rgb(255,0,0)',
+        ),
+        go.Scatter(
+            x=data.CumConfirmed, y=data.NewConfirmed,
+            mode='markers',
+            marker_color='rgb(255,0,0)'
+        ),
+    ])
+    figure.update_layout(
+                legend=dict(x=.05, y=0.95), 
+                plot_bgcolor='#FFFFFF', font=tickFont) \
+          .update_xaxes(
+              title="x axis title",
+              type="log", dtick=1,
+              showgrid=True, gridcolor='#DDDDDD') \
+          .update_yaxes(
+              title="yaxisTitle", showgrid=True, gridcolor='#DDDDDD', dtick=1, type="log")
+    return figure
+
+@app.callback(
+    Output('plot_country', 'figure'), 
+    [Input('country', 'value')]
+)
+def update_plot_country(country):
+    data = GetCountryData(country)
+    return chart(data)
+
+if __name__ == '__main__':
+    app.run_server(host="127.0.0.1")
