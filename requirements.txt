@@ -48,7 +48,7 @@ numpy==1.18.2
 openpyxl==3.0.3
 pandas==1.0.3
 patsy==0.5.1
-pipenv==2018.11.26
+pipenv==2022.1.8
 plotly==4.6.0
 pybloom-live==3.0.0
 pyparsing==2.4.6
